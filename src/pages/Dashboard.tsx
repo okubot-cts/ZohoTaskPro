@@ -156,28 +156,10 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Header />
+      <Header viewMode={viewMode} setViewMode={setViewMode} />
       <main className="flex-1 pb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Toolbar />
-          <div className="flex justify-end mb-4">
-            <div className="flex space-x-2">
-              {VIEW_OPTIONS.map(({ mode, icon: Icon, label }) => (
-                <button
-                  key={mode}
-                  onClick={() => setViewMode(mode)}
-                  className={`inline-flex items-center px-3 py-1.5 rounded-md text-sm ${
-                    viewMode === mode
-                      ? 'bg-primary-100 text-primary-700'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  <Icon className="h-4 w-4 mr-1.5" />
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <Toolbar users={MOCK_USERS} />
 
           {isLoading ? (
             <div className="bg-white shadow rounded-lg p-8 flex items-center justify-center">

@@ -1,14 +1,28 @@
 import { useState } from 'react';
-import { Settings, LogOut, Search } from 'lucide-react';
+import { Settings, LogOut, Search, Plus, List, LayoutGrid, Calendar, Table } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useTaskStore } from '../../store/taskStore';
 import { ViewMode } from '../../types';
 import { Button } from '../common/Button';
+import { TaskModal } from '../tasks/TaskModal';
 
-export const Header: React.FC = () => {
+interface HeaderProps {
+  viewMode: ViewMode;
+  setViewMode: (mode: ViewMode) => void;
+}
+
+const VIEW_OPTIONS = [
+  { mode: ViewMode.List, icon: List, label: 'List' },
+  { mode: ViewMode.Kanban, icon: LayoutGrid, label: 'Kanban' },
+  { mode: ViewMode.Calendar, icon: Calendar, label: 'Calendar' },
+  { mode: ViewMode.Gantt, icon: Table, label: 'Gantt' },
+];
+
+export const Header: React.FC<HeaderProps> = ({ viewMode, setViewMode }) => {
   const { clearAuth } = useAuthStore();
   const { filter, setFilter } = useTaskStore();
   const [searchQuery, setSearchQuery] = useState(filter.search || '');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +41,29 @@ export const Header: React.FC = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between">
         <div className="flex items-center mb-4 sm:mb-0">
           <h1 className="text-xl font-bold text-gray-900 mr-4">ZohoTask Pro</h1>
+          <Button 
+            leftIcon={<Plus className="h-4 w-4" />}
+            onClick={() => setIsAddModalOpen(true)}
+            className="mr-4"
+          >
+            Create Task
+          </Button>
+          <div className="flex space-x-2">
+            {VIEW_OPTIONS.map(({ mode, icon: Icon, label }) => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                className={`inline-flex items-center px-3 py-1.5 rounded-md text-sm ${
+                  viewMode === mode
+                    ? 'bg-primary-100 text-primary-700'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <Icon className="h-4 w-4 mr-1.5" />
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
         
         <div className="flex items-center space-x-4">
@@ -50,6 +87,10 @@ export const Header: React.FC = () => {
           </button>
         </div>
       </div>
+      <TaskModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+      />
     </header>
   );
 };

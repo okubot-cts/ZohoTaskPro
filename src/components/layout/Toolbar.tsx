@@ -5,11 +5,9 @@ import { Button } from '../common/Button';
 import { TaskModal } from '../tasks/TaskModal';
 import { TaskFilter } from '../tasks/TaskFilter';
 import { useTaskStore } from '../../store/taskStore';
-import { ViewMode, Filter } from '../../types';
+import { ViewMode, Filter, User } from '../../types';
 
 interface ToolbarProps {
-  viewMode: ViewMode;
-  setViewMode: (mode: ViewMode) => void;
   users: User[];
 }
 
@@ -20,7 +18,7 @@ const VIEW_OPTIONS = [
   { mode: ViewMode.Gantt, icon: Table, label: 'Gantt' },
 ];
 
-export const Toolbar: React.FC<ToolbarProps> = ({ viewMode, setViewMode, users }) => {
+export const Toolbar: React.FC<ToolbarProps> = ({ users }) => {
   const { filter, setFilter, clearFilter } = useTaskStore();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
@@ -52,12 +50,15 @@ export const Toolbar: React.FC<ToolbarProps> = ({ viewMode, setViewMode, users }
       <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Left section: Create Task button and Filters */}
         <div className="flex items-center gap-3">
+          {/* Create TaskボタンはHeaderに移動したので削除 */}
+          {/*
           <Button 
             leftIcon={<Plus className="h-4 w-4" />}
             onClick={() => setIsAddModalOpen(true)}
           >
             Create Task
           </Button>
+          */}
 
           <Button
             variant="outline"
@@ -127,7 +128,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ viewMode, setViewMode, users }
               This Week
             </button>
             <button
-              onClick={() => setFilter(prev => ({ ...prev, onlyMine: !prev.onlyMine }))}
+              onClick={() => setFilter({ ...filter, onlyMine: !filter.onlyMine })}
               className={`text-sm px-2 py-1 rounded flex items-center ${
                 filter.onlyMine
                   ? 'bg-primary-100 text-primary-800'
@@ -141,6 +142,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({ viewMode, setViewMode, users }
         </div>
 
         {/* Right section: View options */}
+        {/* ここはHeaderに移動したので削除 */}
+        {/*
         <div className="flex space-x-2">
           {VIEW_OPTIONS.map(({ mode, icon: Icon, label }) => (
             <button
@@ -157,6 +160,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ viewMode, setViewMode, users }
             </button>
           ))}
         </div>
+        */}
       </div>
       
       <TaskModal

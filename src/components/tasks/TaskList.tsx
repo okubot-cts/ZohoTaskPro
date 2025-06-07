@@ -6,6 +6,7 @@ import { Task, TaskStatus, RelatedRecord, TaskPriority, KanbanAxis, TaskCategory
 import { useTaskStore } from '../../store/taskStore';
 import { Button } from '../common/Button';
 import { RelatedRecordSelect } from './RelatedRecordSelect';
+import { TaskModal } from './TaskModal';
 
 interface TaskListProps {
   tasks: Task[];
@@ -26,21 +27,19 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks }: TaskListProps) => {
     kanbanAxis,
   } = useTaskStore();
   
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [editingField, setEditingField] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState('');
+  const [taskToEdit, setTaskToEdit] = useState<Task | undefined>(undefined);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskSubject, setNewTaskSubject] = useState('');
   const newTaskInputRef = useRef<HTMLInputElement>(null);
   
-  const [isMenuOpen, setIsMenuOpen] = useState<string | null>(null); // To manage context menu open state by task id
-  const menuButtonRef = useRef<{ [key: string]: HTMLButtonElement | null }>({}); // To store refs for each menu button
+  const [isMenuOpen, setIsMenuOpen] = useState<string | null>(null);
+  const menuButtonRef = useRef<{ [key: string]: HTMLButtonElement | null }>({});
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
 
-  // Group By State
   const [groupByAxis, setGroupByAxis] = useState<KanbanAxis | 'none'>('none');
 
-  // Filter states
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
 
@@ -49,7 +48,7 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks }: TaskListProps) => {
   useEffect(() => {
     if (isMenuOpen && menuButtonRef.current[isMenuOpen]) {
       const rect = menuButtonRef.current[isMenuOpen]!.getBoundingClientRect();
-      const menuWidth = 160; // w-40 in Tailwind CSS is 160px
+      const menuWidth = 160;
       setMenuStyle({
         position: 'fixed',
         top: rect.bottom,
@@ -58,7 +57,6 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks }: TaskListProps) => {
     }
 
     const handleClickOutside = (event: MouseEvent) => {
-      // Check if the click occurred outside the button and outside the menu itself
       if (isMenuOpen && 
           menuButtonRef.current[isMenuOpen] && 
           !menuButtonRef.current[isMenuOpen]!.contains(event.target as Node) && 
@@ -84,23 +82,15 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks }: TaskListProps) => {
     updateTask(taskId, { status: newStatus });
   };
   
-  const handleInlineEdit = (task: Task, field: string) => {
-    setEditingTaskId(task.id);
-    setEditingField(field);
-    setEditValue(task[field as keyof Task] as string);
+  const handleTaskClick = (task: Task) => {
+    setTaskToEdit(task);
+    setIsEditModalOpen(true);
+    setIsMenuOpen(null);
   };
-  
-  const handleInlineEditSave = () => {
-    if (editingTaskId && editingField) {
-      updateTask(editingTaskId, { [editingField]: editValue });
-      setEditingTaskId(null);
-      setEditingField(null);
-    }
-  };
-  
-  const handleInlineEditCancel = () => {
-    setEditingTaskId(null);
-    setEditingField(null);
+
+  const handleModalClose = () => {
+    setIsEditModalOpen(false);
+    setTaskToEdit(undefined);
   };
   
   const handleRelatedRecordChange = (taskId: string, record: RelatedRecord | null) => {
@@ -110,7 +100,7 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks }: TaskListProps) => {
   const handleDelete = (taskId: string) => {
     if (window.confirm('Are you sure you want to delete this task?')) {
       removeTask(taskId);
-      setIsMenuOpen(null); // Close menu after action
+      setIsMenuOpen(null);
     }
   };
   
@@ -121,7 +111,7 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks }: TaskListProps) => {
       subject: `${task.subject} (Copy)`,
     };
     addTask(newTask);
-    setIsMenuOpen(null); // Close menu after action
+    setIsMenuOpen(null);
   };
   
   const handleAddTask = () => {
@@ -183,15 +173,15 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks }: TaskListProps) => {
     }
   
     const firstTask = tasksInGroup[0];
-    if (!firstTask) return groupKey; // Should not happen if groupedTasks are correctly formed
+    if (!firstTask) return groupKey;
   
     switch (groupByAxis) {
       case KanbanAxis.Status:
       case KanbanAxis.Priority:
       case KanbanAxis.Category:
-        return groupKey; // These are already simple strings
+        return groupKey;
       case KanbanAxis.DueDate:
-        return format(new Date(groupKey), 'MMM d, yyyy'); // groupKey is the date string
+        return format(new Date(groupKey), 'MMM d, yyyy');
       case KanbanAxis.AssignedTo:
         return firstTask.assignedTo?.name || 'Unassigned';
       case KanbanAxis.RelatedRecord:
@@ -241,7 +231,6 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks }: TaskListProps) => {
       grouped[groupKey].push(task);
     });
 
-    // Sort groups for consistent display
     const sortedGroupedKeys = Object.keys(grouped).sort((a, b) => {
       if (groupByAxis === KanbanAxis.Status) {
         const order = [TaskStatus.NotStarted, TaskStatus.InProgress, TaskStatus.Waiting, TaskStatus.Deferred, TaskStatus.Completed];
@@ -266,9 +255,7 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks }: TaskListProps) => {
   };
 
   const filteredTasks = tasks.filter(task => {
-    // Filter by status
     const statusMatch = filterStatus === 'all' || task.status === filterStatus;
-    // Filter by priority
     const priorityMatch = filterPriority === 'all' || task.priority === filterPriority;
     return statusMatch && priorityMatch;
   });
@@ -281,7 +268,6 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks }: TaskListProps) => {
   const sortedAndFilteredTasks = () => {
     let currentTasks = [...filteredTasks];
 
-    // Apply sorting
     if (sort) {
       currentTasks.sort((a, b) => {
         const aValue = a[sort.field as keyof Task];
@@ -291,7 +277,6 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks }: TaskListProps) => {
         if (aValue === undefined) return 1;
         if (bValue === undefined) return -1;
 
-        // Special handling for date comparison
         if (sort.field === 'dueDate' && aValue && bValue) {
           const dateA = new Date(aValue as string);
           const dateB = new Date(bValue as string);
@@ -299,7 +284,6 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks }: TaskListProps) => {
           return sort.direction === 'asc' ? comparison : -comparison;
         }
         
-        // Generic comparison for other types
         const comparison = String(aValue) < String(bValue) ? -1 : String(aValue) > String(bValue) ? 1 : 0;
         return sort.direction === 'asc' ? comparison : -comparison;
       });
@@ -475,115 +459,51 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks }: TaskListProps) => {
                       />
                     </td>
                     <td className="px-4 py-2">
-                      {editingTaskId === task.id && editingField === 'subject' ? (
-                        <input
-                          type="text"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onBlur={handleInlineEditSave}
-                          onKeyDown={(e) => { if (e.key === 'Enter') handleInlineEditSave(); if (e.key === 'Escape') handleInlineEditCancel(); }}
-                          autoFocus
-                          className="border rounded-md px-2 py-1 w-full"
-                        />
-                      ) : (
-                        <span
-                          className="text-sm text-gray-900 cursor-pointer"
-                          onClick={() => handleInlineEdit(task, 'subject')}
-                        >
-                          {task.subject}
-                        </span>
-                      )}
+                      <span
+                        className="text-sm text-gray-900 cursor-pointer"
+                        onClick={() => handleTaskClick(task)}
+                      >
+                        {task.subject}
+                      </span>
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap">
-                      {editingTaskId === task.id && editingField === 'status' ? (
-                        <select
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onBlur={handleInlineEditSave}
-                          onKeyDown={(e) => { if (e.key === 'Enter') handleInlineEditSave(); if (e.key === 'Escape') handleInlineEditCancel(); }}
-                          autoFocus
-                          className="border rounded-md px-2 py-1 w-full"
-                        >
-                          {Object.values(TaskStatus).map(status => (
-                            <option key={status} value={status}>{status}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            getStatusColor(task.status)
-                          }`}
-                          onClick={() => handleInlineEdit(task, 'status')}
-                        >
-                          {task.status}
-                        </span>
-                      )}
+                      <span
+                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          getStatusColor(task.status)
+                        }`}
+                        onClick={() => handleTaskClick(task)}
+                      >
+                        {task.status}
+                      </span>
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap">
-                      {editingTaskId === task.id && editingField === 'priority' ? (
-                        <select
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onBlur={handleInlineEditSave}
-                          onKeyDown={(e) => { if (e.key === 'Enter') handleInlineEditSave(); if (e.key === 'Escape') handleInlineEditCancel(); }}
-                          autoFocus
-                          className="border rounded-md px-2 py-1 w-full"
-                        >
-                          {Object.values(TaskPriority).map(priority => (
-                            <option key={priority} value={priority}>{priority}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            getPriorityColor(task.priority)
-                          }`}
-                          onClick={() => handleInlineEdit(task, 'priority')}
-                        >
-                          {task.priority}
-                        </span>
-                      )}
+                      <span
+                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          getPriorityColor(task.priority)
+                        }`}
+                        onClick={() => handleTaskClick(task)}
+                      >
+                        {task.priority}
+                      </span>
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
-                      {editingTaskId === task.id && editingField === 'dueDate' ? (
-                        <input
-                          type="date"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onBlur={handleInlineEditSave}
-                          onKeyDown={(e) => { if (e.key === 'Enter') handleInlineEditSave(); if (e.key === 'Escape') handleInlineEditCancel(); }}
-                          autoFocus
-                          className="border rounded-md px-2 py-1 w-full"
-                        />
-                      ) : (
-                        <span
-                          className={`cursor-pointer ${task.dueDate && new Date(task.dueDate) < new Date() && task.status !== TaskStatus.Completed ? 'text-red-500' : ''}`}
-                          onClick={() => handleInlineEdit(task, 'dueDate')}
-                        >
-                          {task.dueDate ? format(new Date(task.dueDate), 'MMM d, yyyy') : '-'}
-                        </span>
-                      )}
+                      <span
+                        className={`cursor-pointer ${task.dueDate && new Date(task.dueDate) < new Date() && task.status !== TaskStatus.Completed ? 'text-red-500' : ''}`}
+                        onClick={() => handleTaskClick(task)}
+                      >
+                        {task.dueDate ? format(new Date(task.dueDate), 'MMM d, yyyy') : '-'}
+                      </span>
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
                       {task.assignedTo?.name || 'Unassigned'}
                     </td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
-                      {editingTaskId === task.id && editingField === 'relatedRecord' ? (
-                        <RelatedRecordSelect
-                          value={task.relatedRecord || undefined}
-                          onChange={(record: RelatedRecord | null) => {
-                            handleRelatedRecordChange(task.id, record);
-                            handleInlineEditSave();
-                          }}
-                        />
-                      ) : (
-                        <span 
-                          className="cursor-pointer"
-                          onClick={() => handleInlineEdit(task, 'relatedRecord')}
-                        >
-                          {task.relatedRecord?.name || '-'}
-                        </span>
-                      )}
+                    <td 
+                      className="px-3 py-2 whitespace-nowrap text-sm text-gray-500"
+                    >
+                      <RelatedRecordSelect
+                        value={task.relatedRecord}
+                        onChange={(record: RelatedRecord | null) => handleRelatedRecordChange(task.id, record)}
+                      />
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap text-right text-sm font-medium">
                       <div className="relative inline-block text-left">
@@ -608,7 +528,7 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks }: TaskListProps) => {
                           >
                             <div className="py-1" role="none">
                               <button
-                                onClick={() => handleInlineEdit(task, 'subject')}
+                                onClick={() => handleTaskClick(task)}
                                 className="text-gray-700 block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
                                 role="menuitem"
                               >
@@ -671,6 +591,11 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks }: TaskListProps) => {
           </tbody>
         </table>
       </div>
+      <TaskModal
+        isOpen={isEditModalOpen}
+        onClose={handleModalClose}
+        task={taskToEdit}
+      />
     </div>
   );
 };
