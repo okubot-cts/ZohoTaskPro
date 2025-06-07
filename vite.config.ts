@@ -5,6 +5,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   base: '/ZohoTaskPro/',
   plugins: [react()],
+  build: {
+    outDir: 'docs',
+  },
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
