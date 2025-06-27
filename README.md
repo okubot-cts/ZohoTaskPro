@@ -1,2 +1,0 @@
-# ZohoTaskPro
-ZohoCRMのタスク管理をしやすくするためのツール
