@@ -1,16 +1,10 @@
 import React from 'react';
-import { Search, Bell, Settings, User, LayoutGrid, Calendar, List } from 'lucide-react';
+import { LayoutGrid, Calendar, List, Search, Bell, Settings } from 'lucide-react';
 
 interface HeaderProps {
   activeView: 'kanban' | 'calendar' | 'list';
   setActiveView: (view: 'kanban' | 'calendar' | 'list') => void;
 }
-
-const clientId = import.meta.env.VITE_ZOHO_CLIENT_ID;
-const redirectUri = import.meta.env.VITE_ZOHO_REDIRECT_URI;
-const scope = "ZohoCRM.modules.tasks.ALL";
-const responseType = "code";
-const authUrl = `https://accounts.zoho.com/oauth/v2/auth?scope=${scope}&client_id=${clientId}&response_type=${responseType}&access_type=offline&redirect_uri=${encodeURIComponent(redirectUri)}&prompt=consent`;
 
 export const Header: React.FC<HeaderProps> = ({ activeView, setActiveView }) => {
   return (
@@ -72,14 +66,13 @@ export const Header: React.FC<HeaderProps> = ({ activeView, setActiveView }) => 
                 className="w-8 h-8 rounded-full"
               />
               <span className="hidden md:block text-sm font-medium text-gray-700">田中 太郎</span>
-              <a href={authUrl}>
-                <button
-                  type="button"
-                  className="text-white bg-[#e74c3c] hover:bg-[#c0392b] flex items-center text-xs md:text-sm px-2 md:px-3 py-1.5 rounded-md ml-2"
-                >
-                  Zohoでログイン
-                </button>
-              </a>
+              <button
+                type="button"
+                onClick={() => window.location.href = "http://localhost:4000/auth/zoho"}
+                className="text-white bg-[#e74c3c] hover:bg-[#c0392b] flex items-center text-xs md:text-sm px-2 md:px-3 py-1.5 rounded-md ml-2"
+              >
+                Zohoでログイン
+              </button>
             </div>
           </div>
         </div>

@@ -4,16 +4,7 @@ import { Button } from '../common/Button';
 
 export const AuthForm: React.FC = () => {
   const handleZohoLogin = () => {
-    const clientId = '1000.J5ZCOCUS7SAY0ST8AFHPUXHUJVIUZY';
-    const redirectUri = 'http://localhost:4000/auth/zoho/callback';
-    const scope = 'ZohoCRM.modules.ALL';
-    const responseType = 'code';
-    
-    console.log('Using CLIENT_ID:', clientId);
-    
-    const authUrl = `https://accounts.zoho.com/oauth/v2/auth?scope=${scope}&client_id=${clientId}&response_type=${responseType}&access_type=offline&redirect_uri=${encodeURIComponent(redirectUri)}&prompt=consent`;
-    
-    window.location.href = authUrl;
+    window.location.href = "http://localhost:4000/auth/zoho";
   };
 
   return (
