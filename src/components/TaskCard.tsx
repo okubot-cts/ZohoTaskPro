@@ -73,33 +73,35 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, checked, onCh
       onClick={onClick}
     >
       <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center">
+        <div className="flex items-start flex-1 min-w-0">
           <input
             type="checkbox"
             checked={checked}
             readOnly
             onClick={e => { e.stopPropagation(); onCheck && onCheck(); }}
-            className="mr-2 mt-0.5"
+            className="mr-2 mt-0.5 flex-shrink-0"
           />
-          <h3 className="font-medium text-gray-900 text-sm leading-tight flex-1">
+          <h3 className="font-medium text-gray-900 text-xs md:text-sm leading-tight flex-1 min-w-0 break-words">
             {task.title}
           </h3>
         </div>
-        <StatusIcon className="w-4 h-4 text-gray-400 flex-shrink-0 ml-2" />
+        <StatusIcon className="w-3 h-3 md:w-4 md:h-4 text-gray-400 flex-shrink-0 ml-1 md:ml-2" />
       </div>
 
       {task.description && (
-        <p className="text-gray-600 text-xs mb-3 line-clamp-2">
+        <p className="text-gray-600 text-xs mb-2 md:mb-3 line-clamp-2 break-words">
           {task.description}
         </p>
       )}
 
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center space-x-2">
-          <User className="w-3 h-3 text-gray-400" />
-          <span className="text-xs text-gray-600">{typeof task.assignee === 'object' ? task.assignee.name : String(task.assignee)}</span>
+      <div className="flex items-center justify-between mb-2 md:mb-3">
+        <div className="flex items-center space-x-1 md:space-x-2 min-w-0 flex-1">
+          <User className="w-3 h-3 text-gray-400 flex-shrink-0" />
+          <span className="text-xs text-gray-600 truncate">
+            {typeof task.assignee === 'object' ? task.assignee.name : String(task.assignee)}
+          </span>
         </div>
-        <div className={`px-2 py-1 rounded-full text-xs font-medium ${priority.color}`}>
+        <div className={`px-1.5 md:px-2 py-0.5 md:py-1 rounded-full text-xs font-medium ${priority.color} flex-shrink-0`}>
           {task.priority === 'low' && '低'}
           {task.priority === 'medium' && '中'}
           {task.priority === 'high' && '高'}
@@ -107,7 +109,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, checked, onCh
         </div>
       </div>
 
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-2 md:mb-3">
         <div className="flex items-center space-x-1">
           <Calendar className="w-3 h-3 text-gray-400" />
           <span className={`text-xs ${isOverdue ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
@@ -129,10 +131,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, checked, onCh
           {task.tags.slice(0, 2).map((tag, index) => (
             <span 
               key={index}
-              className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-600"
+              className="inline-flex items-center px-1.5 md:px-2 py-0.5 md:py-1 rounded-full text-xs bg-gray-100 text-gray-600"
             >
               <Tag className="w-2 h-2 mr-1" />
-              {tag}
+              <span className="truncate max-w-16 md:max-w-20">{tag}</span>
             </span>
           ))}
           {task.tags.length > 2 && (

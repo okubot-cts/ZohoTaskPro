@@ -15,7 +15,11 @@ const statusLabels: Record<TaskStatus, string> = {
   'done': '完了',
 };
 
-export const KanbanBoard: React.FC = () => {
+interface KanbanBoardProps {
+  filter: { overdue: boolean };
+}
+
+export const KanbanBoard: React.FC<KanbanBoardProps> = ({ filter }) => {
   const [columns, setColumns] = useState<KanbanColumnType[]>(mockKanbanColumns);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -165,7 +169,8 @@ export const KanbanBoard: React.FC = () => {
   const handleCancel = () => setConfirmModal(null);
 
   // 新規タスク追加
-  const handleAddTask = (columnId: TaskStatus, { title, description }: { title: string; description?: string }) => {
+  const handleAddTask = (columnId: TaskStatus, { title, description, dueDate }: { title: string; description?: string; dueDate?: string }) => {
+    const now = new Date();
     const newTask: Task = {
       id: `task-${Date.now()}`,
       title,
@@ -173,9 +178,9 @@ export const KanbanBoard: React.FC = () => {
       status: columnId,
       priority: 'medium',
       assignee: '',
-      dueDate: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      dueDate: dueDate ? new Date(dueDate).toISOString() : now.toISOString(),
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
       tags: [],
     };
     setColumns(prev => prev.map(col =>
@@ -183,28 +188,15 @@ export const KanbanBoard: React.FC = () => {
     ));
   };
 
+  // 期限切れフィルター適用
+  const filterTasks = (tasks: Task[]) => {
+    if (!filter.overdue) return tasks;
+    const now = new Date();
+    return tasks.filter(task => new Date(task.dueDate) < now && task.status !== 'done');
+  };
+
   return (
-    <div className="flex-1 p-6">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">タスク管理</h2>
-        <p className="text-gray-600">ドラッグ&ドロップでタスクのステータスを変更できます</p>
-      </div>
-      {/* 一括操作バー */}
-      {selected.length > 0 && (
-        <div className="mb-2 flex flex-wrap gap-2 items-center bg-blue-50 p-2 rounded">
-          <input type="checkbox" checked={selected.length === columns.flatMap(col => col.tasks).length && columns.flatMap(col => col.tasks).length > 0} onChange={toggleSelectAll} />
-          <span>{selected.length}件選択中</span>
-          <button className="btn-primary px-2 py-1 rounded" onClick={() => handleBulkStatus('todo')}>一括「未着手」</button>
-          <button className="btn-primary px-2 py-1 rounded" onClick={() => handleBulkStatus('in-progress')}>一括「進行中」</button>
-          <button className="btn-primary px-2 py-1 rounded" onClick={() => handleBulkStatus('review')}>一括「レビュー中」</button>
-          <button className="btn-primary px-2 py-1 rounded" onClick={() => handleBulkStatus('done')}>一括「完了」</button>
-          <div className="flex items-center gap-1">
-            <input type="date" className="border rounded px-2 py-1" value={bulkDueDate} onChange={e => setBulkDueDate(e.target.value)} />
-            <button className="btn-primary px-2 py-1 rounded" onClick={handleBulkDueDate}>一括期限変更</button>
-          </div>
-          <button className="btn-danger px-2 py-1 rounded" onClick={handleBulkDelete}>一括削除</button>
-        </div>
-      )}
+    <div className="flex-1">
       <DndContext
         sensors={sensors}
         collisionDetection={pointerWithin}
@@ -212,33 +204,38 @@ export const KanbanBoard: React.FC = () => {
         onDragEnd={handleDragEnd}
         onDragOver={handleDragOver}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {columns.map((column) => (
-            <SortableContext
-              key={column.id}
-              id={column.id}
-              items={column.tasks.map((task) => task.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              <KanbanColumn
+        {/* カンバンボード - モバイルでは横スクロール */}
+        <div className="overflow-x-auto">
+          <div className="flex gap-4 md:gap-6 min-w-max md:min-w-0 md:grid md:grid-cols-2 lg:grid-cols-4">
+            {columns.map((column) => (
+              <SortableContext
+                key={column.id}
                 id={column.id}
-                title={column.title}
-                tasks={column.tasks}
-                onTaskClick={handleTaskClick}
-                overColumnId={overColumnId}
-                selected={selected}
-                onSelect={toggleSelect}
-                onAddTask={(task) => handleAddTask(column.id, task)}
-              />
-            </SortableContext>
-          ))}
+                items={column.tasks.map((task) => task.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <KanbanColumn
+                  id={column.id}
+                  title={column.title}
+                  tasks={filterTasks(column.tasks)}
+                  onTaskClick={handleTaskClick}
+                  overColumnId={overColumnId}
+                  selected={selected}
+                  onSelect={toggleSelect}
+                  onAddTask={(task) => handleAddTask(column.id, task)}
+                />
+              </SortableContext>
+            ))}
+          </div>
         </div>
+        
         <DragOverlay dropAnimation={{ duration: 200, easing: 'cubic-bezier(0.18,0.67,0.6,1.22)' }}>
           {activeTaskId ? (
             <TaskCard task={getTaskById(activeTaskId)!} />
           ) : null}
         </DragOverlay>
       </DndContext>
+      
       {selectedTask && (
         <TaskDetailModal
           task={selectedTask}
@@ -246,12 +243,13 @@ export const KanbanBoard: React.FC = () => {
           onClose={handleCloseModal}
         />
       )}
+      
       {/* 一括操作確認モーダル */}
       {confirmModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 w-full max-w-sm">
             <div className="mb-4 text-lg font-bold text-gray-900">一括操作の確認</div>
-            <div className="mb-6 text-gray-700">
+            <div className="mb-6 text-gray-700 text-sm md:text-base">
               {confirmModal.type === 'status' && (
                 <span>選択タスク{selected.length}件を「{statusLabels[confirmModal.value as TaskStatus]}」に変更します。よろしいですか？</span>
               )}
@@ -262,9 +260,9 @@ export const KanbanBoard: React.FC = () => {
                 <span>選択タスク{selected.length}件を削除します。よろしいですか？</span>
               )}
             </div>
-            <div className="flex justify-end gap-3">
-              <button className="btn-secondary px-4 py-2 rounded" onClick={handleCancel}>キャンセル</button>
-              <button className="btn-primary px-4 py-2 rounded" onClick={handleConfirm}>実行</button>
+            <div className="flex flex-col md:flex-row justify-end gap-2 md:gap-3">
+              <button className="btn-secondary px-4 py-2 rounded text-sm md:text-base" onClick={handleCancel}>キャンセル</button>
+              <button className="btn-primary px-4 py-2 rounded text-sm md:text-base" onClick={handleConfirm}>実行</button>
             </div>
           </div>
         </div>
