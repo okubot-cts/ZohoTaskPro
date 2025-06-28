@@ -58,3 +58,31 @@ export interface FilterOptions {
   tags?: string[];
   search?: string;
 }
+
+// タスクビューのモード
+export enum ViewMode {
+  List = 'list',
+  Kanban = 'kanban',
+  Calendar = 'calendar',
+  Gantt = 'gantt',
+}
+
+// Zoho認証関連の型定義
+export interface ZohoAuth {
+  access_token: string;
+  refresh_token?: string;
+  expires_in?: number;
+  token_type?: string;
+  scope?: string;
+}
+
+export interface TaskFormData {
+  title: string;
+  description?: string;
+  status: TaskStatus;
+  priority: Priority;
+  assignee: string;
+  dueDate: string;
+  tags: string[];
+  relatedDeal?: string;
+}

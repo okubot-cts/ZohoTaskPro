@@ -3,29 +3,27 @@ import { persist } from 'zustand/middleware';
 import { ZohoAuth } from '../types';
 
 interface AuthState {
-  auth: ZohoAuth;
-  setApiKey: (apiKey: string) => void;
-  setOrganizationId: (organizationId: string) => void;
-  setConnected: (isConnected: boolean) => void;
+  auth: ZohoAuth | null;
+  setAuth: (auth: ZohoAuth) => void;
+  setAccessToken: (token: string) => void;
   clearAuth: () => void;
+  isAuthenticated: () => boolean;
 }
-
-const initialState: ZohoAuth = {
-  apiKey: '',
-  organizationId: '',
-  isConnected: false,
-};
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
-      auth: initialState,
-      setApiKey: (apiKey: string) => set((state) => ({ auth: { ...state.auth, apiKey } })),
-      setOrganizationId: (organizationId: string) =>
-        set((state) => ({ auth: { ...state.auth, organizationId } })),
-      setConnected: (isConnected: boolean) =>
-        set((state) => ({ auth: { ...state.auth, isConnected } })),
-      clearAuth: () => set({ auth: initialState }),
+    (set, get) => ({
+      auth: null,
+      setAuth: (auth: ZohoAuth) => set({ auth }),
+      setAccessToken: (access_token: string) => 
+        set((state) => ({ 
+          auth: state.auth ? { ...state.auth, access_token } : { access_token }
+        })),
+      clearAuth: () => set({ auth: null }),
+      isAuthenticated: () => {
+        const { auth } = get();
+        return auth?.access_token ? true : false;
+      },
     }),
     {
       name: 'zohotask-auth',

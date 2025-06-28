@@ -18,6 +18,12 @@ const VIEW_OPTIONS = [
   { mode: ViewMode.Gantt, icon: Table, label: 'Gantt' },
 ];
 
+const clientId = import.meta.env.VITE_ZOHO_CLIENT_ID;
+const redirectUri = import.meta.env.VITE_ZOHO_REDIRECT_URI;
+const scope = "ZohoCRM.tasks.ALL";
+const responseType = "code";
+const authUrl = `https://accounts.zoho.com/oauth/v2/auth?scope=${scope}&client_id=${clientId}&response_type=${responseType}&access_type=offline&redirect_uri=${encodeURIComponent(redirectUri)}&prompt=consent`;
+
 export const Header: React.FC<HeaderProps> = ({ viewMode, setViewMode }) => {
   const { clearAuth } = useAuthStore();
   const { filter, setFilter } = useTaskStore();
@@ -77,6 +83,14 @@ export const Header: React.FC<HeaderProps> = ({ viewMode, setViewMode }) => {
             />
             <Search className="absolute left-2 h-4 w-4 text-gray-400" />
           </form>
+          <a href={authUrl}>
+            <button
+              type="button"
+              className="text-white bg-[#e74c3c] hover:bg-[#c0392b] flex items-center text-sm px-3 py-1.5 rounded-md"
+            >
+              Zohoでログイン
+            </button>
+          </a>
           <button onClick={clearAuth} className="text-gray-600 hover:text-gray-800 flex items-center text-sm">
             <LogOut className="h-4 w-4 mr-1" />
             Logout

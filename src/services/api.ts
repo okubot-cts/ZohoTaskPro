@@ -6,11 +6,8 @@ const createApiClient = (auth: ZohoAuth) => {
   const client = axios.create({
     baseURL: '/zoho-api/crm/v2',
     headers: {
-      'Authorization': `Bearer ${auth.apiKey}`,
+      'Authorization': `Bearer ${auth.access_token}`,
       'Content-Type': 'application/json',
-    },
-    params: {
-      organization_id: auth.organizationId,
     },
   });
   
@@ -20,11 +17,12 @@ const createApiClient = (auth: ZohoAuth) => {
 // Test connection to Zoho CRM API
 export const testConnection = async (auth: ZohoAuth): Promise<boolean> => {
   try {
-    // For demo purposes, accept any non-empty values
-    if (auth.apiKey.trim() && auth.organizationId.trim()) {
+    if (auth.access_token?.trim()) {
+      const client = createApiClient(auth);
+      await client.get('/users/me');
       return true;
     }
-    throw new Error('API Key and Organization ID are required');
+    throw new Error('Access token is required');
   } catch (error) {
     console.error('Connection test failed:', error);
     throw error;
@@ -181,3 +179,13 @@ const transformTaskForZoho = (taskData: Partial<TaskFormData>): any => {
   
   return zohoTask;
 };
+
+export async function fetchZohoAccessToken(code: string) {
+  const response = await fetch(`http://localhost:4000/auth/zoho/callback?code=${code}`);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`トークン取得に失敗しました: ${errorText}`);
+  }
+  return response.json();
+}
