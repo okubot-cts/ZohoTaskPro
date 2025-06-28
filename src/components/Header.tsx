@@ -68,7 +68,15 @@ export const Header: React.FC<HeaderProps> = ({ activeView, setActiveView }) => 
               <span className="hidden md:block text-sm font-medium text-gray-700">田中 太郎</span>
               <button
                 type="button"
-                onClick={() => window.location.href = "http://localhost:4000/auth/zoho"}
+                onClick={() => {
+                  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                  if (isLocal) {
+                    window.location.href = "http://localhost:4000/auth/zoho";
+                  } else {
+                    // 本番用認証サーバーが未構築の場合はアラート
+                    alert('本番環境では認証サーバーがありません。ローカルでお試しください。');
+                  }
+                }}
                 className="text-white bg-[#e74c3c] hover:bg-[#c0392b] flex items-center text-xs md:text-sm px-2 md:px-3 py-1.5 rounded-md ml-2"
               >
                 Zohoでログイン

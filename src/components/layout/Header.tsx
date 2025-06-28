@@ -79,7 +79,14 @@ export const Header: React.FC<HeaderProps> = ({ viewMode, setViewMode }) => {
           </form>
           <button
             type="button"
-            onClick={() => window.location.href = "http://localhost:4000/auth/zoho"}
+            onClick={() => {
+              const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+              if (isLocal) {
+                window.location.href = "http://localhost:4000/auth/zoho";
+              } else {
+                alert('本番環境では認証サーバーがありません。ローカルでお試しください。');
+              }
+            }}
             className="text-white bg-[#e74c3c] hover:bg-[#c0392b] flex items-center text-sm px-3 py-1.5 rounded-md"
           >
             Zohoでログイン
