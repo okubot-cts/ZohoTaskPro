@@ -1,16 +1,3 @@
-<<<<<<< HEAD
-import React from 'react';
-import { AuthForm } from './components/auth/AuthForm';
-import { Dashboard } from './pages/Dashboard';
-import { useAuthStore } from './store/authStore';
-
-function App() {
-  const { auth } = useAuthStore();
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {auth.isConnected ? <Dashboard /> : <AuthForm />}
-=======
 import React, { useState } from 'react';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
@@ -36,13 +23,8 @@ function App() {
           {activeView === 'list' && <TaskListView tasks={allTasks} />}
         </main>
       </div>
->>>>>>> 27514c7 (ローカル作業分の一時コミット)
     </div>
   );
 }
 
-<<<<<<< HEAD
 export default App;
-=======
-export default App; 
->>>>>>> 27514c7 (ローカル作業分の一時コミット)
