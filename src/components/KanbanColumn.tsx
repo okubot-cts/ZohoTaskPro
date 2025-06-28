@@ -64,12 +64,14 @@ export const KanbanColumn: React.FC<KanbanColumnProps & { overColumnId?: string 
       ref={setNodeRef} 
       className={`
         kanban-column flex flex-col h-full w-72 md:w-full min-h-0
-        transition-colors duration-200 
-        ${isActive ? 'bg-blue-50 ring-2 ring-blue-300' : ''}
+        transition-colors duration-200
+        rounded-lg border ${statusColors[id]}
+        overflow-hidden
+        ${isActive ? 'ring-2 ring-blue-300' : ''}
       `}
     >
       {/* カラムヘッダー */}
-      <div className={`flex items-center justify-between mb-3 md:mb-4 p-2 md:p-3 rounded-lg ${statusColors[id]} flex-shrink-0`}>
+      <div className={`flex items-center justify-between mb-2 p-2 md:p-3 rounded-t-lg ${statusColors[id]} flex-shrink-0`}>
         <h2 className="font-semibold text-gray-800 text-sm md:text-base">{title}</h2>
         <span className="bg-white px-2 py-1 rounded-full text-xs font-medium text-gray-600">
           {tasks.length}
@@ -77,7 +79,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps & { overColumnId?: string 
       </div>
       
       {/* タスクリスト */}
-      <div className="flex-1 space-y-2 md:space-y-3 overflow-y-auto">
+      <div className="flex-1 space-y-2 md:space-y-3 overflow-y-auto pt-1">
         {tasks.map((task) => (
           <TaskCard 
             key={task.id}

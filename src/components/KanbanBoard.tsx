@@ -208,23 +208,24 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ filter }) => {
         <div className="overflow-x-auto">
           <div className="flex gap-4 md:gap-6 min-w-max md:min-w-0 md:grid md:grid-cols-2 lg:grid-cols-4">
             {columns.map((column) => (
-              <SortableContext
-                key={column.id}
-                id={column.id}
-                items={column.tasks.map((task) => task.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                <KanbanColumn
+              <div key={column.id} className="p-1">
+                <SortableContext
                   id={column.id}
-                  title={column.title}
-                  tasks={filterTasks(column.tasks)}
-                  onTaskClick={handleTaskClick}
-                  overColumnId={overColumnId}
-                  selected={selected}
-                  onSelect={toggleSelect}
-                  onAddTask={(task) => handleAddTask(column.id, task)}
-                />
-              </SortableContext>
+                  items={column.tasks.map((task) => task.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <KanbanColumn
+                    id={column.id}
+                    title={column.title}
+                    tasks={filterTasks(column.tasks)}
+                    onTaskClick={handleTaskClick}
+                    overColumnId={overColumnId}
+                    selected={selected}
+                    onSelect={toggleSelect}
+                    onAddTask={(task) => handleAddTask(column.id, task)}
+                  />
+                </SortableContext>
+              </div>
             ))}
           </div>
         </div>
