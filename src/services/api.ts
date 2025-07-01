@@ -1,191 +1,188 @@
-import axios from 'axios';
-import { Deal, Task, TaskFormData, User, ZohoAuth } from '../types';
+import { Deal, Task, TaskFormData, User } from '../types';
+import { ZohoCrmClient, ZohoCrmRecord } from './zohoCrmClient';
+import { useAuthStore } from '../store/authStore';
 
-// Create axios instance with base configuration
-const createApiClient = (auth: ZohoAuth) => {
-  const client = axios.create({
-    baseURL: '/zoho-api/crm/v2',
-    headers: {
-      'Authorization': `Bearer ${auth.access_token}`,
-      'Content-Type': 'application/json',
-    },
-  });
-  
-  return client;
-};
+const crmClient = new ZohoCrmClient();
 
-// Test connection to Zoho CRM API
-export const testConnection = async (auth: ZohoAuth): Promise<boolean> => {
-  try {
-    if (auth.access_token?.trim()) {
-      const client = createApiClient(auth);
-      await client.get('/users/me');
-      return true;
-    }
-    throw new Error('Access token is required');
-  } catch (error) {
-    console.error('Connection test failed:', error);
-    throw error;
-  }
-};
-
-// Get all tasks
-export const fetchTasks = async (auth: ZohoAuth): Promise<Task[]> => {
-  try {
-    const client = createApiClient(auth);
-    const response = await client.get('/tasks');
-    return transformTasksResponse(response.data.data);
-  } catch (error) {
-    console.error('Error fetching tasks:', error);
-    throw new Error('Failed to fetch tasks from Zoho CRM');
-  }
-};
-
-// Get a single task by ID
-export const fetchTaskById = async (auth: ZohoAuth, taskId: string): Promise<Task> => {
-  try {
-    const client = createApiClient(auth);
-    const response = await client.get(`/tasks/${taskId}`);
-    return transformTaskResponse(response.data.data[0]);
-  } catch (error) {
-    console.error(`Error fetching task ${taskId}:`, error);
-    throw new Error(`Failed to fetch task ${taskId} from Zoho CRM`);
-  }
-};
-
-// Create a new task
-export const createTask = async (auth: ZohoAuth, taskData: TaskFormData): Promise<Task> => {
-  try {
-    const client = createApiClient(auth);
-    const payload = transformTaskForZoho(taskData);
-    const response = await client.post('/tasks', { data: [payload] });
-    return fetchTaskById(auth, response.data.data[0].details.id);
-  } catch (error) {
-    console.error('Error creating task:', error);
-    throw new Error('Failed to create task in Zoho CRM');
-  }
-};
-
-// Update a task
-export const updateTask = async (auth: ZohoAuth, taskId: string, taskData: Partial<TaskFormData>): Promise<Task> => {
-  try {
-    const client = createApiClient(auth);
-    const payload = transformTaskForZoho(taskData);
-    await client.put(`/tasks/${taskId}`, { data: [payload] });
-    return fetchTaskById(auth, taskId);
-  } catch (error) {
-    console.error(`Error updating task ${taskId}:`, error);
-    throw new Error(`Failed to update task ${taskId} in Zoho CRM`);
-  }
-};
-
-// Delete a task
-export const deleteTask = async (auth: ZohoAuth, taskId: string): Promise<boolean> => {
-  try {
-    const client = createApiClient(auth);
-    await client.delete(`/tasks/${taskId}`);
-    return true;
-  } catch (error) {
-    console.error(`Error deleting task ${taskId}:`, error);
-    throw new Error(`Failed to delete task ${taskId} from Zoho CRM`);
-  }
-};
-
-// Fetch users
-export const fetchUsers = async (auth: ZohoAuth): Promise<User[]> => {
-  try {
-    const client = createApiClient(auth);
-    const response = await client.get('/users');
-    return response.data.data.map((user: any) => ({
-      id: user.id,
-      name: `${user.first_name} ${user.last_name}`,
-      email: user.email,
-      profilePicture: user.profile_picture,
-    }));
-  } catch (error) {
-    console.error('Error fetching users:', error);
-    throw new Error('Failed to fetch users from Zoho CRM');
-  }
-};
-
-// Fetch deals
-export const fetchDeals = async (auth: ZohoAuth): Promise<Deal[]> => {
-  try {
-    const client = createApiClient(auth);
-    const response = await client.get('/deals');
-    return response.data.data.map((deal: any) => ({
-      id: deal.id,
-      name: deal.Deal_Name,
-      stage: deal.Stage,
-      amount: deal.Amount,
-      closingDate: deal.Closing_Date,
-      probability: deal.Probability,
-    }));
-  } catch (error) {
-    console.error('Error fetching deals:', error);
-    throw new Error('Failed to fetch deals from Zoho CRM');
-  }
-};
-
-// Helper functions for data transformation
-const transformTasksResponse = (data: any[]): Task[] => {
-  return data.map(transformTaskResponse);
-};
-
-const transformTaskResponse = (data: any): Task => {
+// Helper function to convert Zoho record to Task
+const convertZohoRecordToTask = (record: ZohoCrmRecord): Task => {
   return {
-    id: data.id,
-    subject: data.Subject,
-    status: data.Status,
-    priority: data.Priority,
-    dueDate: data.Due_Date,
-    description: data.Description,
-    assignedTo: data.Owner ? {
-      id: data.Owner.id,
-      name: data.Owner.name,
-      email: data.Owner.email,
-    } : undefined,
-    relatedDeal: data.What_Id ? {
-      id: data.What_Id.id,
-      name: data.What_Id.name,
-      stage: data.What_Id.Stage,
-      amount: data.What_Id.Amount,
-    } : undefined,
-    createdTime: data.Created_Time,
-    modifiedTime: data.Modified_Time,
+    id: record.id,
+    title: record.Subject || 'Untitled Task',
+    description: record.Description || '',
+    status: mapZohoStatusToTaskStatus(record.Status),
+    priority: mapZohoPriorityToTaskPriority(record.Priority),
+    assignee: record.Owner?.name || 'Unassigned',
+    dueDate: record.Due_Date ? new Date(record.Due_Date) : undefined,
+    tags: [],
+    relatedDeal: record.Related_To?.name || undefined,
+    createdAt: new Date(record.Created_Time || Date.now()),
+    updatedAt: new Date(record.Modified_Time || Date.now()),
   };
 };
 
-const transformTaskForZoho = (taskData: Partial<TaskFormData>): any => {
-  const zohoTask: any = {};
-  
-  if (taskData.subject) zohoTask.Subject = taskData.subject;
-  if (taskData.status) zohoTask.Status = taskData.status;
-  if (taskData.priority) zohoTask.Priority = taskData.priority;
-  if (taskData.dueDate) zohoTask.Due_Date = taskData.dueDate;
-  if (taskData.description) zohoTask.Description = taskData.description;
-  
-  if (taskData.assignedTo) {
-    zohoTask.Owner = {
-      id: taskData.assignedTo,
-    };
-  }
-  
-  if (taskData.relatedDeal) {
-    zohoTask.What_Id = {
-      id: taskData.relatedDeal,
-    };
-  }
-  
-  return zohoTask;
+// Helper function to convert Task to Zoho record
+const convertTaskToZohoRecord = (task: TaskFormData): Partial<ZohoCrmRecord> => {
+  return {
+    Subject: task.title,
+    Description: task.description,
+    Status: mapTaskStatusToZoho(task.status),
+    Priority: mapTaskPriorityToZoho(task.priority),
+    Due_Date: task.dueDate ? task.dueDate.toISOString().split('T')[0] : undefined,
+    // Owner will be set by Zoho CRM automatically or can be specified
+  };
 };
 
-export async function fetchZohoAccessToken(code: string) {
-  const response = await fetch(`http://localhost:4000/auth/zoho/callback?code=${code}`);
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`トークン取得に失敗しました: ${errorText}`);
+// Status mapping functions
+const mapZohoStatusToTaskStatus = (zohoStatus: string): 'todo' | 'in-progress' | 'done' => {
+  switch (zohoStatus?.toLowerCase()) {
+    case 'not started':
+    case 'waiting for input':
+      return 'todo';
+    case 'in progress':
+    case 'started':
+      return 'in-progress';
+    case 'completed':
+    case 'closed':
+      return 'done';
+    default:
+      return 'todo';
   }
-  return response.json();
-}
+};
+
+const mapTaskStatusToZoho = (status: string): string => {
+  switch (status) {
+    case 'todo':
+      return 'Not Started';
+    case 'in-progress':
+      return 'In Progress';
+    case 'done':
+      return 'Completed';
+    default:
+      return 'Not Started';
+  }
+};
+
+const mapZohoPriorityToTaskPriority = (zohoPriority: string): 'low' | 'medium' | 'high' => {
+  switch (zohoPriority?.toLowerCase()) {
+    case 'highest':
+    case 'high':
+      return 'high';
+    case 'normal':
+    case 'medium':
+      return 'medium';
+    case 'low':
+    case 'lowest':
+      return 'low';
+    default:
+      return 'medium';
+  }
+};
+
+const mapTaskPriorityToZoho = (priority: string): string => {
+  switch (priority) {
+    case 'high':
+      return 'High';
+    case 'medium':
+      return 'Normal';
+    case 'low':
+      return 'Low';
+    default:
+      return 'Normal';
+  }
+};
+
+export const testConnection = async (): Promise<boolean> => {
+  try {
+    return await crmClient.testConnection();
+  } catch (error) {
+    console.error('Connection test failed:', error);
+    return false;
+  }
+};
+
+export const fetchTasks = async (): Promise<Task[]> => {
+  try {
+    const response = await crmClient.getTasks({ per_page: 200 });
+    return response.data.map(convertZohoRecordToTask);
+  } catch (error) {
+    console.error('Failed to fetch tasks:', error);
+    // Return empty array on error to prevent app crash
+    return [];
+  }
+};
+
+export const fetchTaskById = async (taskId: string): Promise<Task | null> => {
+  try {
+    const record = await crmClient.getRecord('Tasks', taskId);
+    return record ? convertZohoRecordToTask(record) : null;
+  } catch (error) {
+    console.error('Failed to fetch task by ID:', error);
+    return null;
+  }
+};
+
+export const createTask = async (taskData: TaskFormData): Promise<Task | null> => {
+  try {
+    const zohoRecord = convertTaskToZohoRecord(taskData);
+    const createdRecord = await crmClient.createRecord('Tasks', zohoRecord);
+    return convertZohoRecordToTask(createdRecord);
+  } catch (error) {
+    console.error('Failed to create task:', error);
+    return null;
+  }
+};
+
+export const updateTask = async (taskId: string, taskData: Partial<TaskFormData>): Promise<Task | null> => {
+  try {
+    const zohoRecord = convertTaskToZohoRecord(taskData as TaskFormData);
+    const updatedRecord = await crmClient.updateRecord('Tasks', taskId, zohoRecord);
+    return convertZohoRecordToTask(updatedRecord);
+  } catch (error) {
+    console.error('Failed to update task:', error);
+    return null;
+  }
+};
+
+export const deleteTask = async (taskId: string): Promise<boolean> => {
+  try {
+    return await crmClient.deleteRecord('Tasks', taskId);
+  } catch (error) {
+    console.error('Failed to delete task:', error);
+    return false;
+  }
+};
+
+export const fetchUsers = async (): Promise<User[]> => {
+  try {
+    const response = await crmClient.getUsers();
+    return response.data.map((record: ZohoCrmRecord) => ({
+      id: record.id,
+      name: record.full_name || record.name || 'Unknown User',
+      email: record.email || '',
+      avatar: record.profile?.image_link,
+    }));
+  } catch (error) {
+    console.error('Failed to fetch users:', error);
+    return [];
+  }
+};
+
+export const fetchDeals = async (): Promise<Deal[]> => {
+  try {
+    const response = await crmClient.getDeals({ per_page: 200 });
+    return response.data.map((record: ZohoCrmRecord) => ({
+      id: record.id,
+      name: record.Deal_Name || 'Untitled Deal',
+      stage: record.Stage || 'Unknown',
+      amount: record.Amount || 0,
+      closeDate: record.Closing_Date ? new Date(record.Closing_Date) : new Date(),
+      accountName: record.Account_Name?.name || 'Unknown Account',
+      owner: record.Owner?.name || 'Unassigned',
+      createdAt: new Date(record.Created_Time || Date.now()),
+    }));
+  } catch (error) {
+    console.error('Failed to fetch deals:', error);
+    return [];
+  }
+};
