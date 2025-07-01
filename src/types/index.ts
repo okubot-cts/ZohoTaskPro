@@ -67,14 +67,6 @@ export enum ViewMode {
   Gantt = 'gantt',
 }
 
-// Zoho認証関連の型定義
-export interface ZohoAuth {
-  access_token: string;
-  refresh_token?: string;
-  expires_in?: number;
-  token_type?: string;
-  scope?: string;
-}
 
 export interface TaskFormData {
   title: string;
@@ -83,6 +75,6 @@ export interface TaskFormData {
   priority: Priority;
   assignee: string;
   dueDate: string;
-  tags: string[];
+  tags?: string[];
   relatedDeal?: string;
 }

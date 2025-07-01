@@ -1,191 +1,43 @@
-import axios from 'axios';
-import { Deal, Task, TaskFormData, User, ZohoAuth } from '../types';
+import { Deal, Task, TaskFormData, User } from '../types';
 
-// Create axios instance with base configuration
-const createApiClient = (auth: ZohoAuth) => {
-  const client = axios.create({
-    baseURL: '/zoho-api/crm/v2',
-    headers: {
-      'Authorization': `Bearer ${auth.access_token}`,
-      'Content-Type': 'application/json',
-    },
-  });
-  
-  return client;
+// Placeholder API functions - replace with actual API implementation when needed
+export const testConnection = async (): Promise<boolean> => {
+  // Mock connection test
+  return true;
 };
 
-// Test connection to Zoho CRM API
-export const testConnection = async (auth: ZohoAuth): Promise<boolean> => {
-  try {
-    if (auth.access_token?.trim()) {
-      const client = createApiClient(auth);
-      await client.get('/users/me');
-      return true;
-    }
-    throw new Error('Access token is required');
-  } catch (error) {
-    console.error('Connection test failed:', error);
-    throw error;
-  }
+export const fetchTasks = async (): Promise<Task[]> => {
+  // Mock task fetching - return empty array for now
+  return [];
 };
 
-// Get all tasks
-export const fetchTasks = async (auth: ZohoAuth): Promise<Task[]> => {
-  try {
-    const client = createApiClient(auth);
-    const response = await client.get('/tasks');
-    return transformTasksResponse(response.data.data);
-  } catch (error) {
-    console.error('Error fetching tasks:', error);
-    throw new Error('Failed to fetch tasks from Zoho CRM');
-  }
+export const fetchTaskById = async (taskId: string): Promise<Task | null> => {
+  // Mock task fetching by ID
+  return null;
 };
 
-// Get a single task by ID
-export const fetchTaskById = async (auth: ZohoAuth, taskId: string): Promise<Task> => {
-  try {
-    const client = createApiClient(auth);
-    const response = await client.get(`/tasks/${taskId}`);
-    return transformTaskResponse(response.data.data[0]);
-  } catch (error) {
-    console.error(`Error fetching task ${taskId}:`, error);
-    throw new Error(`Failed to fetch task ${taskId} from Zoho CRM`);
-  }
+export const createTask = async (taskData: TaskFormData): Promise<Task | null> => {
+  console.log('Creating task:', taskData);
+  return null;
 };
 
-// Create a new task
-export const createTask = async (auth: ZohoAuth, taskData: TaskFormData): Promise<Task> => {
-  try {
-    const client = createApiClient(auth);
-    const payload = transformTaskForZoho(taskData);
-    const response = await client.post('/tasks', { data: [payload] });
-    return fetchTaskById(auth, response.data.data[0].details.id);
-  } catch (error) {
-    console.error('Error creating task:', error);
-    throw new Error('Failed to create task in Zoho CRM');
-  }
+export const updateTask = async (taskId: string, taskData: Partial<TaskFormData>): Promise<Task | null> => {
+  console.log('Updating task:', taskId, taskData);
+  return null;
 };
 
-// Update a task
-export const updateTask = async (auth: ZohoAuth, taskId: string, taskData: Partial<TaskFormData>): Promise<Task> => {
-  try {
-    const client = createApiClient(auth);
-    const payload = transformTaskForZoho(taskData);
-    await client.put(`/tasks/${taskId}`, { data: [payload] });
-    return fetchTaskById(auth, taskId);
-  } catch (error) {
-    console.error(`Error updating task ${taskId}:`, error);
-    throw new Error(`Failed to update task ${taskId} in Zoho CRM`);
-  }
+export const deleteTask = async (taskId: string): Promise<boolean> => {
+  // Mock task deletion
+  console.log('Deleting task:', taskId);
+  return true;
 };
 
-// Delete a task
-export const deleteTask = async (auth: ZohoAuth, taskId: string): Promise<boolean> => {
-  try {
-    const client = createApiClient(auth);
-    await client.delete(`/tasks/${taskId}`);
-    return true;
-  } catch (error) {
-    console.error(`Error deleting task ${taskId}:`, error);
-    throw new Error(`Failed to delete task ${taskId} from Zoho CRM`);
-  }
+export const fetchUsers = async (): Promise<User[]> => {
+  // Mock user fetching
+  return [];
 };
 
-// Fetch users
-export const fetchUsers = async (auth: ZohoAuth): Promise<User[]> => {
-  try {
-    const client = createApiClient(auth);
-    const response = await client.get('/users');
-    return response.data.data.map((user: any) => ({
-      id: user.id,
-      name: `${user.first_name} ${user.last_name}`,
-      email: user.email,
-      profilePicture: user.profile_picture,
-    }));
-  } catch (error) {
-    console.error('Error fetching users:', error);
-    throw new Error('Failed to fetch users from Zoho CRM');
-  }
+export const fetchDeals = async (): Promise<Deal[]> => {
+  // Mock deal fetching
+  return [];
 };
-
-// Fetch deals
-export const fetchDeals = async (auth: ZohoAuth): Promise<Deal[]> => {
-  try {
-    const client = createApiClient(auth);
-    const response = await client.get('/deals');
-    return response.data.data.map((deal: any) => ({
-      id: deal.id,
-      name: deal.Deal_Name,
-      stage: deal.Stage,
-      amount: deal.Amount,
-      closingDate: deal.Closing_Date,
-      probability: deal.Probability,
-    }));
-  } catch (error) {
-    console.error('Error fetching deals:', error);
-    throw new Error('Failed to fetch deals from Zoho CRM');
-  }
-};
-
-// Helper functions for data transformation
-const transformTasksResponse = (data: any[]): Task[] => {
-  return data.map(transformTaskResponse);
-};
-
-const transformTaskResponse = (data: any): Task => {
-  return {
-    id: data.id,
-    subject: data.Subject,
-    status: data.Status,
-    priority: data.Priority,
-    dueDate: data.Due_Date,
-    description: data.Description,
-    assignedTo: data.Owner ? {
-      id: data.Owner.id,
-      name: data.Owner.name,
-      email: data.Owner.email,
-    } : undefined,
-    relatedDeal: data.What_Id ? {
-      id: data.What_Id.id,
-      name: data.What_Id.name,
-      stage: data.What_Id.Stage,
-      amount: data.What_Id.Amount,
-    } : undefined,
-    createdTime: data.Created_Time,
-    modifiedTime: data.Modified_Time,
-  };
-};
-
-const transformTaskForZoho = (taskData: Partial<TaskFormData>): any => {
-  const zohoTask: any = {};
-  
-  if (taskData.subject) zohoTask.Subject = taskData.subject;
-  if (taskData.status) zohoTask.Status = taskData.status;
-  if (taskData.priority) zohoTask.Priority = taskData.priority;
-  if (taskData.dueDate) zohoTask.Due_Date = taskData.dueDate;
-  if (taskData.description) zohoTask.Description = taskData.description;
-  
-  if (taskData.assignedTo) {
-    zohoTask.Owner = {
-      id: taskData.assignedTo,
-    };
-  }
-  
-  if (taskData.relatedDeal) {
-    zohoTask.What_Id = {
-      id: taskData.relatedDeal,
-    };
-  }
-  
-  return zohoTask;
-};
-
-export async function fetchZohoAccessToken(code: string) {
-  const response = await fetch(`http://localhost:4000/auth/zoho/callback?code=${code}`);
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`トークン取得に失敗しました: ${errorText}`);
-  }
-  return response.json();
-}
